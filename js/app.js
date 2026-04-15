@@ -156,7 +156,7 @@ async function boot(){
     if(!res?.ok){ renderErr(res?.error||'Ссылка недействительна'); return; }
     META = res.invite||{};
     QUESTIONS = res.questions||[];
-    if(!QUESTIONS.length){ renderErr('Список вопросов пуст'); return; }
+    if(!QUESTIONS.length){ renderErr('Список вопросов пустой'); return; }
     renderQuestion();
   }catch(err){
     renderErr(err?.message || 'Сетевая ошибка при открытии опроса');
