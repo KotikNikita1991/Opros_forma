@@ -1,3 +1,3 @@
 window.PVQ_CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbxjmPL5FS2kHh3eeYUmy_DFii3h6vJH8ETC7aj9V7gzRI3IeSTMfUuoFUKWZadUPNuf_w/exec'
+  API_URL: 'https://script.google.com/macros/s/AKfycbwtEIR_GzU8UsZjjGK1iyc0Tci0eIqSlm43YQ_RPheI9zEhKR86ubbi5cXt2P6nw_jR-g/exec'
 };
