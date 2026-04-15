@@ -13,8 +13,23 @@ let META = null;
 let QUESTIONS = [];
 let idx = 0;
 let answers = Array(57).fill(null);
+// debug-marker: 2026-04-15 repo-check
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+function getApiCandidates(){
+  const cfg = window.PVQ_CONFIG || {};
+  const out = [];
+  const seen = {};
+  function add(url){
+    const u = String(url || '').trim();
+    if(!u || seen[u]) return;
+    seen[u] = true;
+    out.push(u);
+  }
+  add(cfg.API_URL);
+  (cfg.API_URL_FALLBACKS || []).forEach(add);
+  return out;
+}
 async function requestJson(url, init){
   const res = await fetch(url, init);
   const txt = await res.text();
@@ -25,8 +40,8 @@ async function requestJson(url, init){
   }
 }
 
-function makeGetUrl(action, body){
-  const u = new URL(window.PVQ_CONFIG.API_URL);
+function makeGetUrl(apiUrl, action, body){
+  const u = new URL(apiUrl);
   u.searchParams.set('action', action);
   Object.entries(body || {}).forEach(([k,v])=>{
     if(Array.isArray(v)){
@@ -39,16 +54,25 @@ function makeGetUrl(action, body){
 }
 
 async function api(action, body){
-  try{
-    return await requestJson(window.PVQ_CONFIG.API_URL,{
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify(Object.assign({action},body||{})),
-    });
-  }catch{
-    // Fallback: некоторые прокси/браузеры режут POST к Apps Script.
-    return requestJson(makeGetUrl(action, body), { method:'GET' });
+  let lastErr = null;
+  for(const apiUrl of getApiCandidates()){
+    try{
+      return await requestJson(apiUrl,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify(Object.assign({action},body||{})),
+      });
+    }catch(e){
+      lastErr = e;
+      try{
+        // Fallback: некоторые прокси/браузеры режут POST к Apps Script.
+        return await requestJson(makeGetUrl(apiUrl, action, body), { method:'GET' });
+      }catch(e2){
+        lastErr = e2;
+      }
+    }
   }
+  throw (lastErr || new Error('Сервер недоступен'));
 }
 function progressPct(){ return Math.round(((idx+1)/QUESTIONS.length)*100); }
 function answeredCount(){ return answers.filter(v=>v!=null).length; }
@@ -104,47 +128,16 @@ async function submitSurvey(){
     $app.innerHTML='<div class="loading">Отправка результатов...</div>';
     const res=await api('submitValueSurvey',{token:TOKEN,answers});
     if(!res?.ok){ renderErr(res?.error||'Не удалось отправить ответы'); return; }
-    renderResult(res.result||{});
+    renderThanks();
   }catch(err){
     renderErr(err?.message || 'Сетевая ошибка при отправке');
   }
 }
 
-function renderResult(result){
-  const top = result.top_values||[];
+function renderThanks(){
   $app.innerHTML = `
     <div class="ttl">Спасибо! Опрос отправлен</div>
-    <div class="sub">Ответы сохранены и недоступны для редактирования.</div>
-    <div class="grid">
-      <div class="panel">
-        <h3>Ключевая интерпретация</h3>
-        <div class="note" style="font-size:13px;line-height:1.7">${esc(result.interpretation||'')}</div>
-      </div>
-      <div class="panel">
-        <h3>Топ ценностей</h3>
-        <div class="note" style="font-size:13px">${top.map(t=>`${esc(t.label)} (${Number(t.score).toFixed(2)})`).join(' · ')||'—'}</div>
-      </div>
-      <div class="panel">
-        <h3>Столбчатая диаграмма</h3>
-        <canvas id="bar" height="180"></canvas>
-      </div>
-      <div class="panel">
-        <h3>Круг ценностей</h3>
-        <canvas id="circle" height="220"></canvas>
-      </div>
-    </div>`;
-  const bar=result.bar_chart||{};
-  const circle=result.circle_chart||{};
-  new Chart(document.getElementById('bar').getContext('2d'),{
-    type:'bar',
-    data:{labels:bar.labels||[],datasets:[{data:bar.data||[],backgroundColor:'#7b5ea7'}]},
-    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}
-  });
-  new Chart(document.getElementById('circle').getContext('2d'),{
-    type:'radar',
-    data:{labels:circle.labels||[],datasets:[{data:circle.data||[],borderColor:'#7b5ea7',backgroundColor:'rgba(123,94,167,.15)',pointBackgroundColor:'#7b5ea7'}]},
-    options:{plugins:{legend:{display:false}}}
-  });
+    <div class="sub">Ответы сохранены и недоступны для редактирования.</div>`;
 }
 
 async function boot(){
@@ -156,7 +149,7 @@ async function boot(){
     if(!res?.ok){ renderErr(res?.error||'Ссылка недействительна'); return; }
     META = res.invite||{};
     QUESTIONS = res.questions||[];
-    if(!QUESTIONS.length){ renderErr('Список вопросов пустой'); return; }
+    if(!QUESTIONS.length){ renderErr('Список вопросов пуст'); return; }
     renderQuestion();
   }catch(err){
     renderErr(err?.message || 'Сетевая ошибка при открытии опроса');
