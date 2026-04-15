@@ -104,47 +104,16 @@ async function submitSurvey(){
     $app.innerHTML='<div class="loading">Отправка результатов...</div>';
     const res=await api('submitValueSurvey',{token:TOKEN,answers});
     if(!res?.ok){ renderErr(res?.error||'Не удалось отправить ответы'); return; }
-    renderResult(res.result||{});
+    renderThanks();
   }catch(err){
     renderErr(err?.message || 'Сетевая ошибка при отправке');
   }
 }
 
-function renderResult(result){
-  const top = result.top_values||[];
+function renderThanks(){
   $app.innerHTML = `
     <div class="ttl">Спасибо! Опрос отправлен</div>
-    <div class="sub">Ответы сохранены и недоступны для редактирования.</div>
-    <div class="grid">
-      <div class="panel">
-        <h3>Ключевая интерпретация</h3>
-        <div class="note" style="font-size:13px;line-height:1.7">${esc(result.interpretation||'')}</div>
-      </div>
-      <div class="panel">
-        <h3>Топ ценностей</h3>
-        <div class="note" style="font-size:13px">${top.map(t=>`${esc(t.label)} (${Number(t.score).toFixed(2)})`).join(' · ')||'—'}</div>
-      </div>
-      <div class="panel">
-        <h3>Столбчатая диаграмма</h3>
-        <canvas id="bar" height="180"></canvas>
-      </div>
-      <div class="panel">
-        <h3>Круг ценностей</h3>
-        <canvas id="circle" height="220"></canvas>
-      </div>
-    </div>`;
-  const bar=result.bar_chart||{};
-  const circle=result.circle_chart||{};
-  new Chart(document.getElementById('bar').getContext('2d'),{
-    type:'bar',
-    data:{labels:bar.labels||[],datasets:[{data:bar.data||[],backgroundColor:'#7b5ea7'}]},
-    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}
-  });
-  new Chart(document.getElementById('circle').getContext('2d'),{
-    type:'radar',
-    data:{labels:circle.labels||[],datasets:[{data:circle.data||[],borderColor:'#7b5ea7',backgroundColor:'rgba(123,94,167,.15)',pointBackgroundColor:'#7b5ea7'}]},
-    options:{plugins:{legend:{display:false}}}
-  });
+    <div class="sub">Ответы сохранены и недоступны для редактирования.</div>`;
 }
 
 async function boot(){
