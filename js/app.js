@@ -12,7 +12,7 @@ let TOKEN = '';
 let META = null;
 let QUESTIONS = [];
 let idx = 0;
-let answers = Array(57).fill(null);
+let answers = {}; // key -> 1..6
 // debug-marker: 2026-04-15 repo-check
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
@@ -75,7 +75,7 @@ async function api(action, body){
   throw (lastErr || new Error('Сервер недоступен'));
 }
 function progressPct(){ return Math.round(((idx+1)/QUESTIONS.length)*100); }
-function answeredCount(){ return answers.filter(v=>v!=null).length; }
+function answeredCount(){ return Object.keys(answers).length; }
 
 function renderErr(msg){
   $app.innerHTML = `<div class="ttl">Ссылка недоступна</div><div class="sub">${esc(msg||'Не удалось открыть опрос')}</div>`;
@@ -84,7 +84,7 @@ function renderErr(msg){
 function renderQuestion(){
   const q = QUESTIONS[idx];
   if(!q){ renderErr('Вопросы не загружены'); return; }
-  const chosen = answers[idx];
+  const chosen = answers[q.key];
   $app.innerHTML = `
     <div class="ttl">Оценка ценностей (PVQ-RR)</div>
     <div class="sub">${esc(META?.candidate_name||'Кандидат')} · ${esc(META?.vacancy_name||'')}</div>
@@ -107,13 +107,13 @@ function renderQuestion(){
       </div>
     </div>`;
   document.querySelectorAll('input[name="ans"]').forEach(el=>{
-    el.addEventListener('change',e=>{ answers[idx]=Number(e.target.value); });
+    el.addEventListener('change',e=>{ answers[q.key]=Number(e.target.value); });
   });
   const prev=document.getElementById('prev');
   if(prev)prev.onclick=()=>{idx=Math.max(0,idx-1);renderQuestion();};
   const next=document.getElementById('next');
   if(next)next.onclick=()=>{
-    if(answers[idx]==null){alert('Выберите вариант ответа');return;}
+    if(answers[q.key]==null){alert('Выберите вариант ответа');return;}
     idx=Math.min(QUESTIONS.length-1,idx+1);
     renderQuestion();
   };
@@ -123,7 +123,7 @@ function renderQuestion(){
 
 async function submitSurvey(){
   try{
-    if(answers.some(v=>v==null)){alert('Нужно ответить на все 57 вопросов');return;}
+    if(Object.keys(answers).length !== QUESTIONS.length){alert(`Нужно ответить на все ${QUESTIONS.length} вопросов`);return;}
     if(!confirm('После отправки ответы нельзя изменить. Отправить?'))return;
     $app.innerHTML='<div class="loading">Отправка результатов...</div>';
     const res=await api('submitValueSurvey',{token:TOKEN,answers});
@@ -150,6 +150,8 @@ async function boot(){
     META = res.invite||{};
     QUESTIONS = res.questions||[];
     if(!QUESTIONS.length){ renderErr('Список вопросов пуст'); return; }
+    // Защита: если backend старый и не отдал key — добавим ключи по индексу.
+    QUESTIONS = QUESTIONS.map((q,i)=>Object.assign({ key: q.key || ('q' + (i+1)) }, q));
     renderQuestion();
   }catch(err){
     renderErr(err?.message || 'Сетевая ошибка при открытии опроса');
