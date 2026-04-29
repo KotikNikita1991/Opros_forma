@@ -1,6 +1,6 @@
 window.PVQ_CONFIG = {
   // Основной backend: Google Apps Script (обычно доступен без VPN).
-  API_URL: 'https://script.google.com/macros/s/AKfycbw0DkROez7XtGhfbt2M1uJxfmw89y3njnvGYJEYwSKf6bzjVAGyxpLkibBQc7fmepDWwA/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbySCauzCzsHLRcFmoaBBIuwPYPhlWYc7Buewn_cuCHcxRRYjCgXtTCAk86o1JV25wv8tw/exec',
   // Резервные endpoints. Клиент попробует их по порядку, если основной недоступен.
   API_URL_FALLBACKS: [
     'https://vacancy-app-proxy.mcnil1991.workers.dev'
