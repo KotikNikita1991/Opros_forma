@@ -83,11 +83,13 @@ function renderForm(){
         <div class="pvq-qbody">
           <div class="pvq-qtext">${esc(q.text)}</div>
           <div class="pvq-opts">
-            ${[1,2,3,4,5,6].map(v=>`
-            <label class="pvq-opt">
+            ${[1,2,3,4,5,6].map((v,i)=>{
+              const lbl=['Совсем не похоже на меня','Не похоже','Немного похоже','Похоже','Очень похоже','Точно про меня'][i];
+              return`<label class="pvq-opt">
               <input type="radio" name="pvq-${esc(q.key)}" value="${v}">
               <span class="pvq-opt-num">${v}</span>
-            </label>`).join('')}
+              <span class="pvq-opt-lbl">${lbl}</span>
+            </label>`;}).join('')}
           </div>
         </div>
       </div>`).join('')}
