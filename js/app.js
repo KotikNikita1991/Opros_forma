@@ -63,9 +63,11 @@ function renderForm(){
   setPage(`
     <div class="pvq-form-wrap">
       <div class="pvq-form-hdr">
-        <div class="pvq-form-logo-ico">PVQ</div>
+        <div class="pvq-form-logo-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
+        </div>
         <div>
-          <div class="pvq-form-title">Оценка ценностей (PVQ-RR)</div>
+          <div class="pvq-form-title">Оценка ценностей</div>
           <div class="pvq-form-sub">${esc(META?.candidate_name||'')}${META?.vacancy_name?' · '+esc(META.vacancy_name):''}</div>
         </div>
       </div>
@@ -74,8 +76,7 @@ function renderForm(){
         <div class="pvq-progress-cnt" id="pvq-progress-cnt">0 / ${QUESTIONS.length}</div>
       </div>
       <div class="pvq-scale-legend">
-        Оцените, насколько каждое описание похоже на вас:&nbsp;&nbsp;
-        <strong>1</strong> — совсем не похоже на меня &nbsp;·&nbsp; <strong>6</strong> — очень похоже на меня
+        Оцените, насколько каждое описание похоже на вас: от <strong>1</strong> (совсем не похож) до <strong>6</strong> (очень похож)
       </div>
       ${QUESTIONS.map((q,i)=>`
       <div class="pvq-qcard" id="pvq-q-${esc(q.key)}">
@@ -84,7 +85,7 @@ function renderForm(){
           <div class="pvq-qtext">${esc(q.text)}</div>
           <div class="pvq-opts">
             ${[1,2,3,4,5,6].map((v,i)=>{
-              const lbl=['Совсем не похоже на меня','Не похоже','Немного похоже','Похоже','Очень похоже','Точно про меня'][i];
+              const lbl=['Совсем не похож на меня','Не похож на меня','Немного похож на меня','В некоторой степени похож на меня','Похож на меня','Очень похож на меня'][i];
               return`<label class="pvq-opt">
               <input type="radio" name="pvq-${esc(q.key)}" value="${v}">
               <span class="pvq-opt-num">${v}</span>
