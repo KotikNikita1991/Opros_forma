@@ -1,160 +1,132 @@
-const $app = document.getElementById('app');
-const SCALE = [
-  '1 — Совсем не похож на меня',
-  '2 — Не похож на меня',
-  '3 — Немного похож на меня',
-  '4 — В некоторой степени похож на меня',
-  '5 — Похож на меня',
-  '6 — Очень похож на меня',
-];
-
-let TOKEN = '';
-let META = null;
-let QUESTIONS = [];
-let idx = 0;
-let answers = {}; // key -> 1..6
-// debug-marker: 2026-04-15 repo-check
-
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+// ── API helpers ──────────────────────────────────────────────────────
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function getApiCandidates(){
-  const cfg = window.PVQ_CONFIG || {};
-  const out = [];
-  const seen = {};
-  function add(url){
-    const u = String(url || '').trim();
-    if(!u || seen[u]) return;
-    seen[u] = true;
-    out.push(u);
-  }
-  add(cfg.API_URL);
-  (cfg.API_URL_FALLBACKS || []).forEach(add);
-  return out;
+  const cfg=window.PVQ_CONFIG||{};const out=[],seen={};
+  function add(u){u=String(u||'').trim();if(!u||seen[u])return;seen[u]=true;out.push(u);}
+  add(cfg.API_URL);(cfg.API_URL_FALLBACKS||[]).forEach(add);return out;
 }
-async function requestJson(url, init){
-  const res = await fetch(url, init);
-  const txt = await res.text();
-  try{
-    return JSON.parse(txt);
-  }catch{
-    throw new Error('Сервер вернул не JSON');
-  }
+async function requestJson(url,init){
+  const res=await fetch(url,init);const txt=await res.text();
+  try{return JSON.parse(txt);}catch{throw new Error('Сервер вернул не JSON');}
 }
-
-function makeGetUrl(apiUrl, action, body){
-  const u = new URL(apiUrl);
-  u.searchParams.set('action', action);
-  Object.entries(body || {}).forEach(([k,v])=>{
-    if(Array.isArray(v)){
-      u.searchParams.set(k, JSON.stringify(v));
-    }else if(v != null){
-      u.searchParams.set(k, String(v));
-    }
-  });
+function makeGetUrl(apiUrl,action,body){
+  const u=new URL(apiUrl);u.searchParams.set('action',action);
+  Object.entries(body||{}).forEach(([k,v])=>{if(Array.isArray(v))u.searchParams.set(k,JSON.stringify(v));else if(v!=null)u.searchParams.set(k,String(v));});
   return u.toString();
 }
-
-async function api(action, body){
-  let lastErr = null;
+async function api(action,body){
+  let lastErr=null;
   for(const apiUrl of getApiCandidates()){
-    try{
-      return await requestJson(apiUrl,{
-        method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify(Object.assign({action},body||{})),
-      });
-    }catch(e){
-      lastErr = e;
-      try{
-        // Fallback: некоторые прокси/браузеры режут POST к Apps Script.
-        return await requestJson(makeGetUrl(apiUrl, action, body), { method:'GET' });
-      }catch(e2){
-        lastErr = e2;
-      }
-    }
+    try{return await requestJson(apiUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action},body||{}))});}
+    catch(e){lastErr=e;try{return await requestJson(makeGetUrl(apiUrl,action,body),{method:'GET'});}catch(e2){lastErr=e2;}}
   }
-  throw (lastErr || new Error('Сервер недоступен'));
+  throw(lastErr||new Error('Сервер недоступен'));
 }
-function progressPct(){ return Math.round(((idx+1)/QUESTIONS.length)*100); }
-function answeredCount(){ return Object.keys(answers).length; }
+
+// ── State ────────────────────────────────────────────────────────────
+let answers={},TOKEN='',META=null,QUESTIONS=[];
+
+function answeredCount(){return Object.keys(answers).length;}
+function setPage(html){document.getElementById('pvq-form-pg').innerHTML=html;}
 
 function renderErr(msg){
-  $app.innerHTML = `<div class="ttl">Ссылка недоступна</div><div class="sub">${esc(msg||'Не удалось открыть опрос')}</div>`;
+  setPage(`<div class="pvq-pg-msg pvq-pg-msg--err"><div class="pvq-pg-ico">⚠️</div><h2>Ссылка недоступна</h2><p>${esc(msg||'Не удалось открыть опрос')}</p></div>`);
+}
+function renderThanks(){
+  setPage(`<div class="pvq-pg-msg pvq-pg-msg--ok"><div class="pvq-pg-ico">✅</div><h2>Спасибо! Ответы отправлены</h2><p>Мы свяжемся с вами после обработки результатов.<br>Можете закрыть эту страницу.</p></div>`);
 }
 
-function renderQuestion(){
-  const q = QUESTIONS[idx];
-  if(!q){ renderErr('Вопросы не загружены'); return; }
-  const chosen = answers[q.key];
-  $app.innerHTML = `
-    <div class="ttl">Оценка ценностей (PVQ-RR)</div>
-    <div class="sub">${esc(META?.candidate_name||'Кандидат')} · ${esc(META?.vacancy_name||'')}</div>
-    <div class="prog"><div style="width:${progressPct()}%"></div></div>
-    <div class="q">Вопрос ${idx+1} из ${QUESTIONS.length}</div>
-    <div class="qtxt">${esc(q.text)}</div>
-    ${SCALE.map((txt,i)=>`
-      <label class="opt">
-        <input type="radio" name="ans" value="${i+1}" ${chosen===i+1?'checked':''}>
-        <span>${esc(txt)}</span>
-      </label>
-    `).join('')}
-    <div class="row">
-      <span class="note">Заполнено: ${answeredCount()} / ${QUESTIONS.length}</span>
-      <div style="display:flex;gap:8px">
-        <button class="btn" id="prev" ${idx===0?'disabled':''}>Назад</button>
-        ${idx<QUESTIONS.length-1
-          ? '<button class="btn primary" id="next">Далее</button>'
-          : '<button class="btn primary" id="submit">Отправить тест</button>'}
-      </div>
-    </div>`;
-  document.querySelectorAll('input[name="ans"]').forEach(el=>{
-    el.addEventListener('change',e=>{ answers[q.key]=Number(e.target.value); });
-  });
-  const prev=document.getElementById('prev');
-  if(prev)prev.onclick=()=>{idx=Math.max(0,idx-1);renderQuestion();};
-  const next=document.getElementById('next');
-  if(next)next.onclick=()=>{
-    if(answers[q.key]==null){alert('Выберите вариант ответа');return;}
-    idx=Math.min(QUESTIONS.length-1,idx+1);
-    renderQuestion();
-  };
-  const sub=document.getElementById('submit');
-  if(sub)sub.onclick=submitSurvey;
+function updateProgress(){
+  const total=QUESTIONS.length,done=answeredCount();
+  const pct=total>0?Math.round(done/total*100):0;
+  const fill=document.getElementById('pvq-progress-fill');
+  const cnt=document.getElementById('pvq-progress-cnt');
+  const subWrap=document.getElementById('pvq-submit-wrap');
+  if(fill)fill.style.width=pct+'%';
+  if(cnt)cnt.textContent=done+' / '+total;
+  if(subWrap)subWrap.style.display=done===total?'block':'none';
 }
 
 async function submitSurvey(){
+  const total=QUESTIONS.length;
+  if(answeredCount()<total){alert('Нужно ответить на все '+total+' утверждений');return;}
+  const btn=document.getElementById('pvq-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Отправка…';}
   try{
-    if(Object.keys(answers).length !== QUESTIONS.length){alert(`Нужно ответить на все ${QUESTIONS.length} вопросов`);return;}
-    if(!confirm('После отправки ответы нельзя изменить. Отправить?'))return;
-    $app.innerHTML='<div class="loading">Отправка результатов...</div>';
     const res=await api('submitValueSurvey',{token:TOKEN,answers});
-    if(!res?.ok){ renderErr(res?.error||'Не удалось отправить ответы'); return; }
+    if(!res?.ok){renderErr(res?.error||'Не удалось отправить ответы');return;}
     renderThanks();
-  }catch(err){
-    renderErr(err?.message || 'Сетевая ошибка при отправке');
-  }
+  }catch(err){renderErr(err?.message||'Сетевая ошибка при отправке');}
 }
 
-function renderThanks(){
-  $app.innerHTML = `
-    <div class="ttl">Спасибо! Опрос отправлен</div>
-    <div class="sub">Ответы сохранены и недоступны для редактирования.</div>`;
+function renderForm(){
+  setPage(`
+    <div class="pvq-form-wrap">
+      <div class="pvq-form-hdr">
+        <div class="pvq-form-logo-ico">PVQ</div>
+        <div>
+          <div class="pvq-form-title">Оценка ценностей (PVQ-RR)</div>
+          <div class="pvq-form-sub">${esc(META?.candidate_name||'')}${META?.vacancy_name?' · '+esc(META.vacancy_name):''}</div>
+        </div>
+      </div>
+      <div class="pvq-form-progress">
+        <div class="pvq-progress-bar"><div class="pvq-progress-fill" id="pvq-progress-fill" style="width:0%"></div></div>
+        <div class="pvq-progress-cnt" id="pvq-progress-cnt">0 / ${QUESTIONS.length}</div>
+      </div>
+      <div class="pvq-scale-legend">
+        Оцените, насколько каждое описание похоже на вас:&nbsp;&nbsp;
+        <strong>1</strong> — совсем не похоже на меня &nbsp;·&nbsp; <strong>6</strong> — очень похоже на меня
+      </div>
+      ${QUESTIONS.map((q,i)=>`
+      <div class="pvq-qcard" id="pvq-q-${esc(q.key)}">
+        <div class="pvq-qnum">${i+1}</div>
+        <div class="pvq-qbody">
+          <div class="pvq-qtext">${esc(q.text)}</div>
+          <div class="pvq-opts">
+            ${[1,2,3,4,5,6].map(v=>`
+            <label class="pvq-opt">
+              <input type="radio" name="pvq-${esc(q.key)}" value="${v}">
+              <span class="pvq-opt-num">${v}</span>
+            </label>`).join('')}
+          </div>
+        </div>
+      </div>`).join('')}
+      <div class="pvq-form-footer">
+        <div id="pvq-submit-wrap" style="display:none">
+          <button type="button" class="pvq-submit-btn" id="pvq-submit-btn">Отправить ответы</button>
+        </div>
+        <p style="margin-top:12px;font-size:12px;color:#9ca3af">Ответьте на все <strong>${QUESTIONS.length}</strong> утверждений чтобы отправить опрос</p>
+      </div>
+    </div>`);
+
+  document.querySelectorAll('[name^="pvq-"]').forEach(input=>{
+    input.addEventListener('change',e=>{
+      const key=e.target.name.replace('pvq-','');
+      answers[key]=parseInt(e.target.value);
+      const card=document.getElementById('pvq-q-'+key);
+      if(card){
+        card.classList.add('pvq-qcard--done');
+        card.querySelectorAll('.pvq-opt').forEach(opt=>opt.classList.remove('pvq-opt--sel'));
+        e.target.closest('.pvq-opt')?.classList.add('pvq-opt--sel');
+      }
+      updateProgress();
+    });
+  });
+  document.getElementById('pvq-submit-btn').onclick=submitSurvey;
+  updateProgress();
 }
 
 async function boot(){
   try{
-    const u = new URL(location.href);
-    TOKEN = u.searchParams.get('token') || '';
-    if(!TOKEN){ renderErr('Не найден token в ссылке'); return; }
-    const res = await api('startValueSurvey',{token:TOKEN});
-    if(!res?.ok){ renderErr(res?.error||'Ссылка недействительна'); return; }
-    META = res.invite||{};
-    QUESTIONS = res.questions||[];
-    if(!QUESTIONS.length){ renderErr('Список вопросов пуст'); return; }
-    // Защита: если backend старый и не отдал key — добавим ключи по индексу.
-    QUESTIONS = QUESTIONS.map((q,i)=>Object.assign({ key: q.key || ('q' + (i+1)) }, q));
-    renderQuestion();
-  }catch(err){
-    renderErr(err?.message || 'Сетевая ошибка при открытии опроса');
-  }
+    const u=new URL(location.href);
+    TOKEN=u.searchParams.get('token')||'';
+    if(!TOKEN){renderErr('Не найден token в ссылке');return;}
+    const res=await api('startValueSurvey',{token:TOKEN});
+    if(!res?.ok){renderErr(res?.error||'Ссылка недействительна');return;}
+    META=res.invite||{};
+    QUESTIONS=(res.questions||[]).map((q,i)=>Object.assign({key:q.key||('q'+(i+1))},q));
+    if(!QUESTIONS.length){renderErr('Список вопросов пуст');return;}
+    renderForm();
+  }catch(err){renderErr(err?.message||'Сетевая ошибка при открытии опроса');}
 }
 boot();

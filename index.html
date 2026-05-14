@@ -4,16 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Оценка ценностей PVQ-RR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <main class="wrap">
-    <section class="card" id="app">
-      <div class="loading">Загрузка опроса...</div>
-    </section>
-  </main>
-  <script src="js/config.js"></script>
-  <script src="js/app.js"></script>
+<div id="pvq-form-pg">
+  <div class="pvq-pg-loading"><span class="spin"></span> Загружаем опрос…</div>
+</div>
+<!-- API URL берётся из js/config.js (поле PVQ_CONFIG.API_URL). Менять только там! -->
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
