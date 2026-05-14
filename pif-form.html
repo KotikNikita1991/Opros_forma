@@ -56,13 +56,16 @@
 <div id="pif-form-pg">
   <div class="pif-pg-loading"><span class="spin"></span> Загружаем опрос…</div>
 </div>
+<!-- API URL берётся из js/config.js (поле PVQ_CONFIG.API_URL). Менять только там! -->
+<script src="js/config.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 //  PiF-Q Public Form — автономная страница для участника
 //  Разместить рядом с index.html в репозитории Opros_forma
 // ═══════════════════════════════════════════════════════════════
 
-var API_URL = 'https://script.google.com/macros/s/AKfycbzcN4SA9Sz3SOof4Th8FYcKARr92mt4NLt0LrpLx-jqxZa-ULbUHFkpg1hAgpqvk5v_BA/exec';
+// URL загружается из js/config.js → PVQ_CONFIG.API_URL. Не дублируйте здесь!
+var API_URL = window.PVQ_CONFIG && window.PVQ_CONFIG.API_URL;
 var API_TIMEOUT_MS = 120000;
 
 async function callApi(action, data) {

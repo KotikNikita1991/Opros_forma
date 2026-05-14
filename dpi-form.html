@@ -56,6 +56,8 @@
 <div id="dpi-form-pg">
   <div class="dpi-pg-loading"><span class="spin"></span> Загружаем опрос…</div>
 </div>
+<!-- API URL берётся из js/config.js (поле PVQ_CONFIG.API_URL). Менять только там! -->
+<script src="js/config.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 //  DPI-R Public Form — автономная страница для участника
@@ -63,8 +65,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 // ── API ─────────────────────────────────────────────────────────
-// URL веб-приложения Google Apps Script (обновите при смене деплоя)
-var API_URL = 'https://script.google.com/macros/s/AKfycbzcN4SA9Sz3SOof4Th8FYcKARr92mt4NLt0LrpLx-jqxZa-ULbUHFkpg1hAgpqvk5v_BA/exec';
+// URL загружается из js/config.js → PVQ_CONFIG.API_URL. Не дублируйте здесь!
+var API_URL = window.PVQ_CONFIG && window.PVQ_CONFIG.API_URL;
 var API_TIMEOUT_MS = 120000;
 
 async function callApi(action, data) {
