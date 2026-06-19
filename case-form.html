@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Практическое задание — кейсы</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Onest',system-ui,sans-serif;background:#f4f5f7;color:#1a1a2e;min-height:100vh}
+  button{font-family:inherit;cursor:pointer;border:none;background:none}
+  #case-form-pg{min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:0 0 48px}
+  .cs-wrap{max-width:820px;width:100%;margin:0 auto;padding:24px 16px}
+  .cs-hdr{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid #e5e7eb}
+  .cs-logo{width:48px;height:48px;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .cs-title{font-size:21px;font-weight:800;color:#1a1a2e;margin:0 0 4px}
+  .cs-sub{font-size:14px;color:#4b5563;line-height:1.5}
+  .cs-instr{background:#eff4ff;border:1px solid #c7d7fe;border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:13.5px;color:#1e3a8a;line-height:1.6}
+  .cs-bars{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+  .cs-progress{display:flex;align-items:center;gap:10px;flex:1;min-width:200px}
+  .cs-pbar{flex:1;height:6px;border-radius:3px;background:#e5e7eb;overflow:hidden}
+  .cs-pfill{height:100%;border-radius:3px;background:#2563eb;transition:width .3s}
+  .cs-pcnt{font-size:12px;font-weight:700;color:#4b5563;white-space:nowrap}
+  .cs-timer{font-size:12px;font-weight:700;color:#1e3a8a;background:#eff4ff;border:1px solid #c7d7fe;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  .cs-timer.cs-timer--over{color:#b42318;background:#fef3f2;border-color:#fda29b}
+  .cs-antipaste{display:flex;align-items:center;gap:8px;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:9px 13px;margin:6px 0 18px;line-height:1.5}
+  .cs-case{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px 18px 6px;margin-bottom:16px}
+  .cs-case-hdr{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .cs-case-badge{font-size:11px;font-weight:800;color:#2563eb;background:#eff4ff;border-radius:6px;padding:3px 9px;white-space:nowrap;flex-shrink:0}
+  .cs-case-title{font-size:16px;font-weight:800;color:#1a1a2e}
+  .cs-case-desc{font-size:13.5px;color:#374151;line-height:1.6;margin-bottom:14px;white-space:pre-wrap}
+  .cs-q{margin-bottom:16px}
+  .cs-q-text{display:flex;gap:8px;font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:7px;line-height:1.5}
+  .cs-q-num{color:#2563eb;font-weight:800;flex-shrink:0}
+  .cs-ta{width:100%;min-height:96px;border:1.5px solid #e5e7eb;border-radius:10px;padding:11px 13px;font-family:inherit;font-size:14px;color:#1a1a2e;line-height:1.6;resize:vertical;background:#fbfbfd;transition:border-color .15s,background .15s}
+  .cs-ta:focus{outline:none;border-color:#2563eb;background:#fff}
+  .cs-ta--done{border-color:#16a34a;background:#f6fdf9}
+  .cs-paste-warn{font-size:11.5px;color:#b42318;margin-top:5px;display:none}
+  .cs-footer{margin-top:8px;text-align:center}
+  .cs-sub-err{padding:11px 15px;border-radius:10px;background:#fef3f2;color:#b42318;font-size:13px;margin-bottom:14px;border:1px solid #fda29b;text-align:left}
+  .cs-submit{background:#2563eb;color:#fff;border:none;border-radius:11px;padding:14px 40px;font-size:15px;font-weight:700;transition:background .2s}
+  .cs-submit:hover{background:#1d4ed8}
+  .cs-submit:disabled{opacity:.6;cursor:not-allowed}
+  .cs-loading{display:flex;align-items:center;justify-content:center;min-height:60vh;font-size:16px;color:#4b5563;gap:12px}
+  .cs-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 24px}
+  .cs-msg h2{font-size:22px;font-weight:800;margin:12px 0 8px;color:#1a1a2e}
+  .cs-msg p{color:#4b5563;font-size:14px;line-height:1.6;max-width:460px}
+  .cs-msg-ico{font-size:52px;line-height:1}
+  .cs-msg--ok .cs-msg-ico{color:#16a34a}
+  .cs-msg--err .cs-msg-ico{color:#b42318}
+  .spin{display:inline-block;width:22px;height:22px;border:2.5px solid rgba(37,99,235,.2);border-top-color:#2563eb;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;flex-shrink:0}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(max-width:520px){
+    .cs-hdr{flex-direction:column;gap:10px}
+    .cs-case{padding:14px 14px 4px}
+  }
+</style>
+</head>
+<body>
+<div id="case-form-pg">
+  <div class="cs-loading"><span class="spin"></span> Загружаем задание…</div>
+</div>
+<!-- API URL берётся из js/config.js (поле PVQ_CONFIG.API_URL). Менять только там! -->
+<script src="js/config.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Кейсы — автономная страница для участника (case_token в URL)
+//  Размещена рядом с index.html в репозитории Opros_forma
+// ═══════════════════════════════════════════════════════════════
+var API_URL = window.PVQ_CONFIG && window.PVQ_CONFIG.API_URL;
+var API_TIMEOUT_MS = 120000;
+
+async function callApi(action, data) {
+  var ctrl = new AbortController();
+  var t = setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, API_TIMEOUT_MS);
+  try {
+    var r = await fetch(API_URL, {
+      method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action: action }, data || {})),
+      signal: ctrl.signal
+    });
+    clearTimeout(t);
+    if (!r.ok) return { ok: false, error: 'HTTP ' + r.status };
+    var text = await r.text();
+    try { return JSON.parse(text); } catch(e) { return { ok: false, error: text.slice(0, 200) }; }
+  } catch(e) {
+    clearTimeout(t);
+    return { ok: false, error: e && e.name === 'AbortError' ? 'Таймаут запроса — попробуйте снова' : String(e && (e.message || e) || e) };
+  }
+}
+
+function escH(s) {
+  if (s == null || s === '') return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function loadProgress(token) {
+  try { var r = localStorage.getItem('case_prog_' + token); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function saveProgress(token, answers) {
+  try { localStorage.setItem('case_prog_' + token, JSON.stringify({ answers: answers, ts: Date.now() })); } catch(e) {}
+}
+function clearProgress(token) {
+  try { localStorage.removeItem('case_prog_' + token); } catch(e) {}
+}
+
+// ── Список вопросов (плоский) из набора кейсов ────────────────────
+function flattenQuestions(cases) {
+  var out = [];
+  (cases || []).forEach(function(c) {
+    (c.questions || []).forEach(function(q) { out.push(q.id); });
+  });
+  return out;
+}
+
+var STATE = { token: '', cases: [], answers: {}, qids: [] };
+
+function fmtTime(sec) {
+  if (sec < 0) sec = 0;
+  var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  function p(n){ return (n < 10 ? '0' : '') + n; }
+  return (h > 0 ? h + ':' : '') + p(m) + ':' + p(s);
+}
+
+function startTimer(minutes) {
+  var el = document.getElementById('cs-timer');
+  if (!el || !minutes) return;
+  var remaining = minutes * 60;
+  function tick() {
+    el.textContent = remaining > 0 ? ('Осталось: ' + fmtTime(remaining)) : 'Время вышло';
+    if (remaining <= 0) { el.classList.add('cs-timer--over'); return; }
+    remaining--;
+    setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+// ── Анти-вставка ──────────────────────────────────────────────────
+function blockCopyPaste(ta) {
+  var warn = ta.parentElement.querySelector('.cs-paste-warn');
+  function flash() {
+    if (!warn) return;
+    warn.style.display = 'block';
+    clearTimeout(ta._warnT);
+    ta._warnT = setTimeout(function(){ warn.style.display = 'none'; }, 2500);
+  }
+  ta.addEventListener('paste', function(e){ e.preventDefault(); flash(); });
+  ta.addEventListener('drop',  function(e){ e.preventDefault(); flash(); });
+  ta.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  ta.addEventListener('keydown', function(e){
+    var k = (e.key || '').toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && (k === 'v')) { e.preventDefault(); flash(); }
+  });
+}
+
+function renderForm(container, invite, template) {
+  STATE.cases = template.cases || [];
+  STATE.qids = flattenQuestions(STATE.cases);
+  var total = STATE.qids.length;
+  var answered = STATE.qids.filter(function(id){ return (STATE.answers[id] || '').trim() !== ''; }).length;
+
+  var casesHtml = STATE.cases.map(function(c) {
+    var qHtml = (c.questions || []).map(function(q, qi) {
+      var val = STATE.answers[q.id] || '';
+      var done = val.trim() !== '';
+      return '<div class="cs-q">' +
+        '<div class="cs-q-text"><span class="cs-q-num">' + (qi + 1) + '.</span><span>' + escH(q.text) + '</span></div>' +
+        '<textarea class="cs-ta' + (done ? ' cs-ta--done' : '') + '" data-qid="' + escH(q.id) + '" rows="4" ' +
+          'placeholder="Ваш ответ…" spellcheck="true">' + escH(val) + '</textarea>' +
+        '<div class="cs-paste-warn">⚠ Вставка текста отключена — пишите ответ своими словами.</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="cs-case">' +
+      '<div class="cs-case-hdr">' +
+        '<span class="cs-case-badge">' + escH(c.title || 'Кейс') + '</span>' +
+      '</div>' +
+      (c.description ? '<div class="cs-case-desc">' + escH(c.description) + '</div>' : '') +
+      qHtml +
+    '</div>';
+  }).join('');
+
+  container.innerHTML =
+    '<div class="cs-wrap">' +
+      '<div class="cs-hdr">' +
+        '<div class="cs-logo">К</div>' +
+        '<div>' +
+          '<h1 class="cs-title">' + escH(template.title || 'Практическое задание') + '</h1>' +
+          '<p class="cs-sub">Здравствуйте, <b>' + escH(invite.candidate_name || 'участник') + '</b>! ' +
+          'Ответьте письменно на все вопросы — под каждым есть поле для ответа.</p>' +
+        '</div>' +
+      '</div>' +
+      (template.instruction ? '<div class="cs-instr">' + escH(template.instruction) + '</div>' : '') +
+      '<div class="cs-bars">' +
+        '<div class="cs-progress">' +
+          '<div class="cs-pbar"><div class="cs-pfill" id="cs-pfill" style="width:' + (total ? Math.round(answered / total * 100) : 0) + '%"></div></div>' +
+          '<span class="cs-pcnt" id="cs-pcnt">' + answered + ' / ' + total + '</span>' +
+        '</div>' +
+        (template.time_limit_min ? '<span class="cs-timer" id="cs-timer"></span>' : '') +
+      '</div>' +
+      '<div class="cs-antipaste">🔒 Вставка скопированного текста в поля ответов отключена. Просим отвечать самостоятельно — так оценка будет честной.</div>' +
+      casesHtml +
+      '<div class="cs-footer">' +
+        '<div id="cs-sub-err" class="cs-sub-err" style="display:none"></div>' +
+        '<button type="button" class="cs-submit" id="cs-submit">Отправить ответы →</button>' +
+      '</div>' +
+    '</div>';
+
+  // Привязка событий к textarea
+  container.querySelectorAll('.cs-ta').forEach(function(ta) {
+    blockCopyPaste(ta);
+    ta.addEventListener('input', function() {
+      var qid = ta.dataset.qid;
+      STATE.answers[qid] = ta.value;
+      saveProgress(STATE.token, STATE.answers);
+      ta.classList.toggle('cs-ta--done', ta.value.trim() !== '');
+      updateProgress();
+    });
+  });
+
+  document.getElementById('cs-submit').addEventListener('click', submitForm);
+  if (template.time_limit_min) startTimer(template.time_limit_min);
+  updateProgress();
+}
+
+function updateProgress() {
+  var total = STATE.qids.length;
+  var answered = STATE.qids.filter(function(id){ return (STATE.answers[id] || '').trim() !== ''; }).length;
+  var pf = document.getElementById('cs-pfill');
+  var pc = document.getElementById('cs-pcnt');
+  if (pf) pf.style.width = (total ? Math.round(answered / total * 100) : 0) + '%';
+  if (pc) pc.textContent = answered + ' / ' + total;
+}
+
+async function submitForm() {
+  var total = STATE.qids.length;
+  var missing = STATE.qids.filter(function(id){ return (STATE.answers[id] || '').trim() === ''; });
+  var errEl = document.getElementById('cs-sub-err');
+  if (missing.length) {
+    if (errEl) {
+      errEl.textContent = 'Пожалуйста, ответьте на все вопросы. Осталось без ответа: ' + missing.length + ' из ' + total + '.';
+      errEl.style.display = '';
+    }
+    var firstEl = document.querySelector('.cs-ta[data-qid="' + (window.CSS && CSS.escape ? CSS.escape(missing[0]) : missing[0]) + '"]');
+    if (firstEl) { firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEl.focus(); }
+    return;
+  }
+  var btn = document.getElementById('cs-submit');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Отправляем…'; }
+  var res = await callApi('submitCaseSurvey', { token: STATE.token, answers: STATE.answers });
+  if (res && res.ok) {
+    clearProgress(STATE.token);
+    document.getElementById('case-form-pg').innerHTML =
+      '<div class="cs-msg cs-msg--ok"><div class="cs-msg-ico">✓</div>' +
+        '<h2>Задание выполнено!</h2><p>Ваши ответы успешно отправлены. Спасибо за уделённое время!</p></div>';
+  } else {
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Отправить ответы →'; }
+    if (errEl) { errEl.textContent = (res && res.error) || 'Не удалось отправить. Попробуйте снова.'; errEl.style.display = ''; }
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+async function init() {
+  var container = document.getElementById('case-form-pg');
+  var qs;
+  try { qs = new URLSearchParams(location.search); } catch(e) { qs = { get: function(){ return null; } }; }
+  var token = qs.get('case_token');
+
+  if (!token) {
+    container.innerHTML =
+      '<div class="cs-msg cs-msg--err"><div class="cs-msg-ico">⚠</div>' +
+        '<h2>Ссылка недействительна</h2>' +
+        '<p>Токен не найден. Перейдите по ссылке из письма.<br>Если проблема повторяется, обратитесь к специалисту по подбору персонала.</p></div>';
+    return;
+  }
+  STATE.token = token;
+
+  var res = await callApi('startCaseSurvey', { token: token });
+  if (!res || !res.ok) {
+    if (res && res.already_done) {
+      container.innerHTML =
+        '<div class="cs-msg cs-msg--ok"><div class="cs-msg-ico">✓</div>' +
+          '<h2>Задание уже выполнено</h2><p>Ваши ответы были сохранены ранее. Спасибо за участие!</p></div>';
+    } else {
+      container.innerHTML =
+        '<div class="cs-msg cs-msg--err"><div class="cs-msg-ico">⚠</div>' +
+          '<h2>' + escH(res && res.error ? res.error : 'Ссылка недействительна') + '</h2>' +
+          '<p>Обратитесь к специалисту по подбору персонала.</p></div>';
+    }
+    return;
+  }
+
+  var saved = loadProgress(token);
+  STATE.answers = saved && saved.answers ? saved.answers : {};
+  renderForm(container, res.invite || {}, res.template || {});
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
