@@ -22,6 +22,7 @@
   .cs-pfill{height:100%;border-radius:3px;background:#2563eb;transition:width .3s}
   .cs-pcnt{font-size:12px;font-weight:700;color:#4b5563;white-space:nowrap}
   .cs-timer{font-size:12px;font-weight:700;color:#1e3a8a;background:#eff4ff;border:1px solid #c7d7fe;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  .cs-timer.cs-timer--warn{color:#92400e;background:#fffbeb;border-color:#fde68a}
   .cs-timer.cs-timer--over{color:#b42318;background:#fef3f2;border-color:#fda29b}
   .cs-antipaste{display:flex;align-items:center;gap:8px;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:9px 13px;margin:6px 0 18px;line-height:1.5}
   .cs-case{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px 18px 6px;margin-bottom:16px}
@@ -114,7 +115,7 @@ function flattenQuestions(cases) {
   return out;
 }
 
-var STATE = { token: '', cases: [], answers: {}, qids: [] };
+var STATE = { token: '', cases: [], answers: {}, qids: [], timeUp: false, submitting: false };
 
 function fmtTime(sec) {
   if (sec < 0) sec = 0;
@@ -128,12 +129,33 @@ function startTimer(minutes) {
   if (!el || !minutes) return;
   var remaining = minutes * 60;
   function tick() {
-    el.textContent = remaining > 0 ? ('Осталось: ' + fmtTime(remaining)) : 'Время вышло';
-    if (remaining <= 0) { el.classList.add('cs-timer--over'); return; }
+    if (STATE.timeUp) return;
+    if (remaining <= 0) {
+      el.textContent = 'Время вышло — отправляем ответы…';
+      el.classList.add('cs-timer--over');
+      handleTimeUp();
+      return;
+    }
+    // Предупреждение «1 минута» — мягкий сигнал
+    if (remaining === 60) el.classList.add('cs-timer--warn');
+    el.textContent = 'Осталось: ' + fmtTime(remaining);
     remaining--;
     setTimeout(tick, 1000);
   }
   tick();
+}
+
+function handleTimeUp() {
+  if (STATE.timeUp) return;
+  STATE.timeUp = true;
+  // Блокируем все ответы, чтобы кандидат не дописывал после звонка
+  document.querySelectorAll('.cs-ta').forEach(function(ta){
+    ta.disabled = true;
+    ta.style.background = '#f3f4f6';
+  });
+  var btn = document.getElementById('cs-submit');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Время вышло — отправляем…'; }
+  submitForm(true);
 }
 
 // ── Анти-вставка ──────────────────────────────────────────────────
@@ -198,7 +220,9 @@ function renderForm(container, invite, template) {
         '</div>' +
         (template.time_limit_min ? '<span class="cs-timer" id="cs-timer"></span>' : '') +
       '</div>' +
-      '<div class="cs-antipaste">🔒 Вставка скопированного текста в поля ответов отключена. Просим отвечать самостоятельно — так оценка будет честной.</div>' +
+      '<div class="cs-antipaste">🔒 Вставка скопированного текста в поля ответов отключена. Просим отвечать самостоятельно — так оценка будет честной.' +
+        (template.time_limit_min ? ' По истечении времени ответы отправятся автоматически (даже если заполнены не все).' : '') +
+      '</div>' +
       casesHtml +
       '<div class="cs-footer">' +
         '<div id="cs-sub-err" class="cs-sub-err" style="display:none"></div>' +
@@ -218,7 +242,7 @@ function renderForm(container, invite, template) {
     });
   });
 
-  document.getElementById('cs-submit').addEventListener('click', submitForm);
+  document.getElementById('cs-submit').addEventListener('click', function(){ submitForm(false); });
   if (template.time_limit_min) startTimer(template.time_limit_min);
   updateProgress();
 }
@@ -232,11 +256,13 @@ function updateProgress() {
   if (pc) pc.textContent = answered + ' / ' + total;
 }
 
-async function submitForm() {
+async function submitForm(force) {
+  if (STATE.submitting) return;
   var total = STATE.qids.length;
   var missing = STATE.qids.filter(function(id){ return (STATE.answers[id] || '').trim() === ''; });
   var errEl = document.getElementById('cs-sub-err');
-  if (missing.length) {
+  // Полнота требуется только при ручной отправке. Авто-отправка по таймеру (force===true) идёт как есть.
+  if (force !== true && missing.length) {
     if (errEl) {
       errEl.textContent = 'Пожалуйста, ответьте на все вопросы. Осталось без ответа: ' + missing.length + ' из ' + total + '.';
       errEl.style.display = '';
@@ -245,16 +271,24 @@ async function submitForm() {
     if (firstEl) { firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstEl.focus(); }
     return;
   }
+  STATE.submitting = true;
   var btn = document.getElementById('cs-submit');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Отправляем…'; }
+  if (btn && !force) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Отправляем…'; }
   var res = await callApi('submitCaseSurvey', { token: STATE.token, answers: STATE.answers });
   if (res && res.ok) {
     clearProgress(STATE.token);
+    var answered = total - missing.length;
+    var isTimeUp = !!force;
     document.getElementById('case-form-pg').innerHTML =
-      '<div class="cs-msg cs-msg--ok"><div class="cs-msg-ico">✓</div>' +
-        '<h2>Задание выполнено!</h2><p>Ваши ответы успешно отправлены. Спасибо за уделённое время!</p></div>';
+      '<div class="cs-msg cs-msg--ok"><div class="cs-msg-ico">' + (isTimeUp ? '⏱' : '✓') + '</div>' +
+        '<h2>' + (isTimeUp ? 'Время вышло — ответы отправлены' : 'Задание выполнено!') + '</h2>' +
+        '<p>' + (isTimeUp
+          ? 'Лимит времени истёк. Мы получили ваши ответы (заполнено: ' + answered + ' из ' + total + '). Спасибо за уделённое время!'
+          : 'Ваши ответы успешно отправлены. Спасибо за уделённое время!') +
+        '</p></div>';
   } else {
-    if (btn) { btn.disabled = false; btn.innerHTML = 'Отправить ответы →'; }
+    STATE.submitting = false;
+    if (btn && !force) { btn.disabled = false; btn.innerHTML = 'Отправить ответы →'; }
     if (errEl) { errEl.textContent = (res && res.error) || 'Не удалось отправить. Попробуйте снова.'; errEl.style.display = ''; }
   }
 }
