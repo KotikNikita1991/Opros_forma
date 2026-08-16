@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тест на логику</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Onest',system-ui,sans-serif;background:#f4f5f7;color:#1a1a2e;min-height:100vh}
+  button{font-family:inherit;cursor:pointer;border:none;background:none}
+  #lg-pg{min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:24px 16px 48px}
+  .lg-card{max-width:860px;width:100%;background:#fff;border-radius:16px;padding:26px 28px 30px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .lg-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid #e5e7eb}
+  .lg-qnum{font-size:22px;font-weight:800;white-space:nowrap}
+  .lg-prog{flex:1;min-width:150px}
+  .lg-pbar{height:6px;border-radius:3px;background:#e5e7eb;overflow:hidden}
+  .lg-pfill{height:100%;border-radius:3px;background:#2563eb;transition:width .3s}
+  .lg-pcnt{font-size:12px;font-weight:600;color:#6b7280;margin-top:5px}
+  .lg-timer{font-size:15px;font-weight:800;color:#1e3a8a;background:#eff4ff;border:1px solid #c7d7fe;border-radius:999px;padding:7px 16px;white-space:nowrap}
+  .lg-timer.warn{color:#92400e;background:#fffbeb;border-color:#fde68a}
+  .lg-timer.over{color:#b42318;background:#fef3f2;border-color:#fda29b}
+  .lg-text{font-size:16px;line-height:1.55;margin-bottom:16px}
+  .lg-img{max-width:100%;height:auto;display:block;margin:0 auto 18px;border-radius:8px}
+  .lg-opts{display:flex;flex-direction:column;gap:9px;margin-bottom:22px}
+  .lg-opt{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:11px;border:1.5px solid #e5e7eb;background:#f9fafb;font-size:15px;text-align:left;transition:all .15s;width:100%}
+  .lg-opt:hover{border-color:#2563eb;background:#f5f8ff}
+  .lg-opt--sel{border-color:#2563eb;background:#2563eb;color:#fff}
+  .lg-opt-n{width:26px;height:26px;border-radius:7px;background:#eef1f5;color:#4b5563;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .lg-opt--sel .lg-opt-n{background:rgba(255,255,255,.25);color:#fff}
+  .lg-nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .lg-btn{padding:12px 26px;border-radius:11px;font-size:14px;font-weight:700;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;transition:all .15s}
+  .lg-btn:hover{background:#eef1f5}
+  .lg-btn--fin{background:#2563eb;color:#fff;border-color:#2563eb;margin-left:auto}
+  .lg-btn--fin:hover{background:#1d4ed8}
+  .lg-btn:disabled{opacity:.5;cursor:not-allowed}
+  .lg-hint{font-size:12px;color:#9ca3af;margin-top:14px;line-height:1.5}
+  .lg-start{max-width:620px;text-align:center;padding:20px 0}
+  .lg-start h1{font-size:26px;font-weight:800;margin-bottom:14px}
+  .lg-start p{font-size:14.5px;color:#4b5563;line-height:1.7;margin-bottom:12px}
+  .lg-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;font-size:13.5px;color:#92400e;line-height:1.6;margin:16px 0 22px;text-align:left}
+  .lg-go{background:#2563eb;color:#fff;border-radius:12px;padding:15px 46px;font-size:16px;font-weight:700}
+  .lg-go:hover{background:#1d4ed8}
+  .lg-load{display:flex;align-items:center;justify-content:center;min-height:50vh;font-size:16px;color:#4b5563;gap:12px}
+  .lg-msg{text-align:center;padding:40px 24px}
+  .lg-msg h2{font-size:22px;font-weight:800;margin:12px 0 8px}
+  .lg-msg p{color:#4b5563;font-size:14px;line-height:1.6}
+  .lg-msg-ico{font-size:52px;line-height:1}
+  .ok{color:#16a34a}.err{color:#b42318}
+  .spin{display:inline-block;width:22px;height:22px;border:2.5px solid rgba(37,99,235,.2);border-top-color:#2563eb;border-radius:50%;animation:sp .7s linear infinite;flex-shrink:0}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(max-width:520px){ .lg-card{padding:18px 16px 22px} .lg-btn{padding:11px 18px} }
+</style>
+</head>
+<body>
+<div id="lg-pg">
+  <div class="lg-load"><span class="spin"></span> Загружаем тест…</div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/logis-questions.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Тест на логику — страница участника (logis_token в URL)
+// ═══════════════════════════════════════════════════════════════
+var API_URL = window.PVQ_CONFIG && window.PVQ_CONFIG.API_URL;
+var API_TIMEOUT_MS = 120000;
+
+async function callApi(action, data) {
+  var ctrl = new AbortController();
+  var t = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, API_TIMEOUT_MS);
+  try {
+    var r = await fetch(API_URL, {
+      method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action: action }, data || {})),
+      signal: ctrl.signal
+    });
+    clearTimeout(t);
+    if (!r.ok) return { ok: false, error: 'HTTP ' + r.status };
+    var text = await r.text();
+    try { return JSON.parse(text); } catch (e) { return { ok: false, error: text.slice(0, 200) }; }
+  } catch (e) {
+    clearTimeout(t);
+    return { ok: false, error: e && e.name === 'AbortError' ? 'Таймаут запроса — попробуйте снова' : String(e && (e.message || e) || e) };
+  }
+}
+function escH(s){ if(s==null||s==='')return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function seededShuffle(arr, seed) {
+  var a = arr.slice(), s = seed | 1;
+  for (var i = a.length - 1; i > 0; i--) {
+    s = ((Math.imul ? Math.imul(1664525, s) : (1664525 * s)) + 1013904223) | 0;
+    var j = Math.abs(s) % (i + 1), tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+function tokenSeed(tk) {
+  var h = 0;
+  for (var i = 0; i < (tk || '').length; i++)
+    h = (((Math.imul ? Math.imul(31, h) : (31 * h)) | 0) + tk.charCodeAt(i)) | 0;
+  return Math.abs(h) || 1;
+}
+function loadProg(tk){ try{var r=localStorage.getItem('logis_'+tk);return r?JSON.parse(r):null;}catch(e){return null;} }
+function saveProg(tk,st){ try{localStorage.setItem('logis_'+tk,JSON.stringify(st));}catch(e){} }
+function clearProg(tk){ try{localStorage.removeItem('logis_'+tk);}catch(e){} }
+
+var S = { token:'', order:[], answers:{}, view:[], idx:0, endAt:0, limitMin:30, submitting:false, done:false };
+
+function fmt(sec){ if(sec<0)sec=0; var m=Math.floor(sec/60),s=sec%60; return m+':'+(s<10?'0':'')+s; }
+function answered(){ return Object.keys(S.answers).length; }
+
+// Варианты перемешиваются вместе с их номерами; у задач-аналогий номера
+// впечатаны в картинку, поэтому там порядок сохраняется как есть.
+function buildView(){
+  S.view = S.order.map(function(q){
+    var idxs = q.opts.map(function(_,i){ return i+1; });
+    if (!q.optsInImage) idxs = seededShuffle(idxs, tokenSeed(S.token) + q.n * 7919);
+    return { n:q.n, text:q.text, img:q.img||'', optsInImage:!!q.optsInImage,
+             opts: idxs.map(function(orig){ return { orig:orig, label:q.opts[orig-1] }; }) };
+  });
+}
+
+function startTimer(){
+  function tick(){
+    if (S.done) return;
+    var left = Math.round((S.endAt - Date.now())/1000);
+    var el = document.getElementById('lg-timer');
+    if (left <= 0) {
+      if (el){ el.textContent='Время вышло'; el.className='lg-timer over'; }
+      finish(true);
+      return;
+    }
+    if (el){
+      el.textContent = fmt(left);
+      el.className = 'lg-timer' + (left <= 60 ? ' over' : (left <= 300 ? ' warn' : ''));
+    }
+    setTimeout(tick, 500);
+  }
+  tick();
+}
+
+function render(){
+  var v = S.view[S.idx];
+  if (!v) return;
+  var sel = S.answers[v.n];
+  var opts = v.opts.map(function(o,i){
+    return '<button type="button" class="lg-opt'+(sel===o.orig?' lg-opt--sel':'')+'" data-o="'+o.orig+'">'+
+      '<span class="lg-opt-n">'+(i+1)+'</span><span>'+escH(o.label)+'</span></button>';
+  }).join('');
+  var left = Math.max(0, Math.round((S.endAt - Date.now())/1000));
+  document.getElementById('lg-pg').innerHTML =
+    '<div class="lg-card">'+
+      '<div class="lg-top">'+
+        '<div class="lg-qnum">Вопрос '+(S.idx+1)+'</div>'+
+        '<div class="lg-prog">'+
+          '<div class="lg-pbar"><div class="lg-pfill" style="width:'+Math.round(answered()/S.view.length*100)+'%"></div></div>'+
+          '<div class="lg-pcnt">Отвечено '+answered()+' из '+S.view.length+'</div>'+
+        '</div>'+
+        '<div class="lg-timer" id="lg-timer">'+fmt(left)+'</div>'+
+      '</div>'+
+      '<div class="lg-text">'+escH(v.text)+'</div>'+
+      (v.img?'<img class="lg-img" src="img/'+escH(v.img)+'" alt="">':'')+
+      '<div class="lg-opts" id="lg-opts">'+opts+'</div>'+
+      '<div class="lg-nav">'+
+        '<button type="button" class="lg-btn" id="lg-prev"'+(S.idx===0?' disabled':'')+'>← Назад</button>'+
+        '<button type="button" class="lg-btn" id="lg-skip">Пропустить</button>'+
+        '<button type="button" class="lg-btn lg-btn--fin" id="lg-fin">Завершить тестирование</button>'+
+      '</div>'+
+      '<div class="lg-hint">Сложный вопрос можно пропустить и вернуться к нему позже — после последнего вопроса тест сам вернёт вас к пропущенным. По истечении времени ответы отправятся автоматически.</div>'+
+    '</div>';
+
+  document.getElementById('lg-opts').addEventListener('click', function(ev){
+    var b = ev.target.closest ? ev.target.closest('.lg-opt') : null;
+    if (!b) return;
+    S.answers[v.n] = Number(b.dataset.o);
+    saveProg(S.token, {answers:S.answers, endAt:S.endAt, idx:S.idx});
+    next();
+  });
+  document.getElementById('lg-prev').addEventListener('click', function(){ if(S.idx>0){S.idx--;render();} });
+  document.getElementById('lg-skip').addEventListener('click', next);
+  document.getElementById('lg-fin').addEventListener('click', function(){
+    var left = S.view.length - answered();
+    var msg = left>0 ? ('Без ответа остал'+(left===1?'ся':'ось')+' '+left+'. Завершить тест?') : 'Завершить тест?';
+    if (confirm(msg)) finish(false);
+  });
+}
+
+// Следующий вопрос: сначала вперёд, затем — к первому неотвеченному с начала.
+function next(){
+  for (var i = S.idx+1; i < S.view.length; i++){
+    if (!S.answers[S.view[i].n]) { S.idx = i; render(); return; }
+  }
+  for (var j = 0; j < S.idx; j++){
+    if (!S.answers[S.view[j].n]) { S.idx = j; render(); return; }
+  }
+  if (S.idx < S.view.length-1) { S.idx++; render(); return; }
+  render();
+}
+
+async function finish(auto){
+  if (S.submitting) return;
+  S.submitting = true; S.done = true;
+  document.getElementById('lg-pg').innerHTML =
+    '<div class="lg-card"><div class="lg-load"><span class="spin"></span> Отправляем ответы…</div></div>';
+  var dur = Math.round((Date.now() - (S.endAt - S.limitMin*60000))/1000);
+  var res = await callApi('submitLogisSurvey', { token:S.token, answers:S.answers, duration_sec:dur });
+  if (res && res.ok) {
+    clearProg(S.token);
+    document.getElementById('lg-pg').innerHTML =
+      '<div class="lg-card"><div class="lg-msg"><div class="lg-msg-ico ok">'+(auto?'⏱':'✓')+'</div>'+
+      '<h2>'+(auto?'Время вышло — ответы отправлены':'Тест завершён!')+'</h2>'+
+      '<p>Вы ответили на '+answered()+' из '+S.view.length+' вопросов. '+
+      'Специалист по подбору свяжется с вами после рассмотрения результатов.<br>Можете закрыть эту страницу.</p></div></div>';
+  } else {
+    S.submitting = false; S.done = false;
+    document.getElementById('lg-pg').innerHTML =
+      '<div class="lg-card"><div class="lg-msg"><div class="lg-msg-ico err">⚠</div>'+
+      '<h2>Не удалось отправить</h2><p>'+escH((res&&res.error)||'Попробуйте ещё раз.')+'</p>'+
+      '<button type="button" class="lg-go" style="margin-top:18px" onclick="finish('+(auto?'true':'false')+')">Повторить отправку</button></div></div>';
+  }
+}
+
+function renderStart(invite, resume){
+  document.getElementById('lg-pg').innerHTML =
+    '<div class="lg-card"><div class="lg-start" style="margin:0 auto">'+
+      '<h1>Тест на логику</h1>'+
+      '<p>Здравствуйте, <b>'+escH(invite.candidate_name||'участник')+'</b>!</p>'+
+      '<p>Тест состоит из '+S.order.length+' вопросов. На прохождение даётся '+S.limitMin+' минут. '+
+      'Вам понадобятся листок и ручка. Сложный вопрос можно пропустить и вернуться к нему позже. '+
+      'Количество вопросов, на которые вы успеете ответить, влияет на результат.</p>'+
+      '<div class="lg-warn">⏱ Таймер запускается сразу после нажатия кнопки и не останавливается, если закрыть страницу. '+
+      'Начинайте, когда вас никто не отвлекает. По истечении времени ответы отправятся автоматически.</div>'+
+      '<button type="button" class="lg-go" id="lg-go">'+(resume?'Продолжить тест':'Начать тест')+'</button>'+
+    '</div></div>';
+  document.getElementById('lg-go').addEventListener('click', function(){
+    if (!S.endAt) S.endAt = Date.now() + S.limitMin*60000;
+    saveProg(S.token, {answers:S.answers, endAt:S.endAt, idx:S.idx});
+    render(); startTimer();
+  });
+}
+
+async function init(){
+  var pg = document.getElementById('lg-pg');
+  var qs; try{ qs = new URLSearchParams(location.search); }catch(e){ qs={get:function(){return null;}}; }
+  var token = qs.get('logis_token');
+  if (!token) {
+    pg.innerHTML='<div class="lg-card"><div class="lg-msg"><div class="lg-msg-ico err">⚠</div>'+
+      '<h2>Ссылка недействительна</h2><p>Токен не найден. Перейдите по ссылке из письма.</p></div></div>';
+    return;
+  }
+  S.token = token;
+  var res = await callApi('startLogisSurvey', { token: token });
+  if (!res || !res.ok) {
+    if (res && res.already_done) {
+      pg.innerHTML='<div class="lg-card"><div class="lg-msg"><div class="lg-msg-ico ok">✓</div>'+
+        '<h2>Тест уже пройден</h2><p>Ваши ответы были сохранены ранее. Спасибо за участие!</p></div></div>';
+    } else {
+      pg.innerHTML='<div class="lg-card"><div class="lg-msg"><div class="lg-msg-ico err">⚠</div>'+
+        '<h2>'+escH(res&&res.error?res.error:'Ссылка недействительна')+'</h2>'+
+        '<p>Обратитесь к специалисту по подбору персонала.</p></div></div>';
+    }
+    return;
+  }
+  S.limitMin = Number(res.time_limit_min) || 30;
+  S.order = seededShuffle(LOGIS_QUESTIONS, tokenSeed(token));
+  buildView();
+  var saved = loadProg(token);
+  if (saved) {
+    S.answers = saved.answers || {};
+    S.endAt = saved.endAt || 0;
+    S.idx = Math.min(saved.idx || 0, S.view.length - 1);
+  }
+  if (S.endAt && Date.now() >= S.endAt) { finish(true); return; }   // время истекло, пока страница была закрыта
+  renderStart(res.invite || {}, !!(saved && saved.endAt));
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
